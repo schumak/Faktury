@@ -76,5 +76,6 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "price",
             "vat",
             "note",
+            "archived", 
             "_id",
         ]
