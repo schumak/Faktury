@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiGet } from "../utils/api";
+import { Link } from "react-router-dom";
 
 import Country from "./Country";
 
@@ -149,8 +150,24 @@ const PersonDetail = () => {
                 <br />
                 {countryLabel || "-"}
             </p>
-        </div>
-    );
-};
+            {/* >>> TLAČÍTKA NAVÍC <<< */}
+            <div className="mt-3">
+            <Link
+            to={`/persons/edit/${person._id}`}
+            className="btn btn-secondary me-2"
+            >
+            Upravit
+            </Link>
+
+            <Link
+            to="/persons"
+            className="btn btn-light"
+            >
+            Zpět na seznam
+            </Link>
+      </div>
+    </div>
+  );
+}
 
 export default PersonDetail;

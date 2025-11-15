@@ -33,15 +33,17 @@ function InvoiceForm() {
     fetch(`http://localhost:8000/api/invoices/${id}/`)
       .then((res) => res.json())
       .then((data) => {
+        console.log("INVOICE DETAIL:", data);
         setForm({
           invoiceNumber: data.invoiceNumber || "",
-          sellerId: data.seller?._id || "",
-          buyerId: data.buyer?._id || "",
+          // API vrací objekty seller/buyer, součástí odpovědi jsou objekty
+          sellerId: data.seller?.id ? String(data.seller.id) : "",
+          buyerId: data.buyer?.id ? String(data.buyer.id) : "",
           issued: data.issued || "",
           dueDate: data.dueDate || "",
           product: data.product || "",
-          price: data.price || "",
-          vat: data.vat || "",
+          price: data.price != null ? String(data.price) : "",
+          vat: data.vat != null ? String(data.vat) : "",
           note: data.note || "",
         });
       });
@@ -55,18 +57,26 @@ function InvoiceForm() {
   function handleSubmit(e) {
     e.preventDefault();
 
-    // payload přesně podle Varianty B
+    // základní validace na frontendu, ať neposíláš null
+    if (!form.sellerId || !form.buyerId) {
+      alert("Vyber prodávajícího i kupujícího.");
+      return;
+    }
+
     const payload = {
       invoiceNumber: form.invoiceNumber || undefined,
+      // VARIANTA B – přesně podle zadání / Postmanu
       seller: { _id: Number(form.sellerId) },
       buyer: { _id: Number(form.buyerId) },
-      issued: form.issued,
-      dueDate: form.dueDate,
+      issued: form.issued || null,
+      dueDate: form.dueDate || null,
       product: form.product,
-      price: form.price,
-      vat: form.vat,
+      price: form.price ? Number(form.price) : 0,
+      vat: form.vat ? Number(form.vat) : 0,
       note: form.note,
     };
+
+    console.log("PAYLOAD ODESÍLÁM:", payload);
 
     const method = id ? "PUT" : "POST";
     const url = id
@@ -78,16 +88,28 @@ function InvoiceForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-      .then(async (res) => {
-        if (!res.ok) {
-          const error = await res.json();
-          console.error("Chyba:", error);
-          alert("Chyba při ukládání faktury");
-          return;
-        }
-        return res.json();
-      })
-      .then(() => {
+    .then(async (res) => {
+    if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        console.error("Chyba při ukládání faktury (raw):", error);
+
+        // vytáhneme konkrétní zprávy od backendu
+        const sellerMsg = Array.isArray(error.seller) ? error.seller.join(" | ") : "";
+        const buyerMsg  = Array.isArray(error.buyer)  ? error.buyer.join(" | ")  : "";
+
+        alert(
+        "Chyba při ukládání faktury:\n\n" +
+        (sellerMsg ? "seller: " + sellerMsg + "\n" : "") +
+        (buyerMsg  ? "buyer: "  + buyerMsg  + "\n" : "") +
+        (!sellerMsg && !buyerMsg ? JSON.stringify(error, null, 2) : "")
+        );
+
+        return;
+    }
+    return res.json();
+    })
+      .then((data) => {
+        if (!data) return;
         navigate("/invoices");
       });
   }
@@ -97,7 +119,6 @@ function InvoiceForm() {
       <h1>{id ? "Upravit fakturu" : "Nová faktura"}</h1>
 
       <form onSubmit={handleSubmit} className="mt-3">
-
         {/* ČÍSLO FAKTURY */}
         <div className="mb-3">
           <label className="form-label">Číslo faktury</label>
@@ -122,7 +143,7 @@ function InvoiceForm() {
           >
             <option value="">-- Vyber osobu --</option>
             {persons.map((p) => (
-              <option key={p._id} value={p._id}>
+              <option key={p.id} value={String(p.id)}>
                 {p.name}
               </option>
             ))}
@@ -140,7 +161,7 @@ function InvoiceForm() {
           >
             <option value="">-- Vyber osobu --</option>
             {persons.map((p) => (
-              <option key={p._id} value={p._id}>
+              <option key={p.id} value={String(p.id)}>
                 {p.name}
               </option>
             ))}
@@ -224,7 +245,7 @@ function InvoiceForm() {
         </button>
 
         <Link to="/invoices" className="btn btn-secondary ms-2">
-          Zpět
+          Zpět na seznam
         </Link>
       </form>
     </div>

@@ -10,6 +10,27 @@ function InvoiceIndex() {
       .then((data) => setInvoices(data));
   }, []);
 
+function handleDelete(id) {
+    if (!window.confirm("Opravdu chceš fakturu smazat?")) {
+      return;
+    }
+
+    fetch(`http://localhost:8000/api/invoices/${id}/`, {
+      method: "DELETE",
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Chyba při mazání faktury");
+        }
+        // odstraníme fakturu ze stavu, ať se okamžitě ztratí ze seznamu
+        setInvoices((prev) => prev.filter((inv) => inv._id !== id));
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Nepodařilo se smazat fakturu.");
+      });
+  }
+
   return (
     <div>
       <h1>Faktury</h1>
@@ -18,7 +39,7 @@ function InvoiceIndex() {
         Nová faktura
       </Link>
 
-      <table className="table">
+      <table className="table table-striped">
         <thead>
           <tr>
             <th>Číslo</th>
@@ -46,6 +67,10 @@ function InvoiceIndex() {
                 <Link to={`/invoices/edit/${inv._id}`} className="btn btn-sm btn-secondary">
                   Upravit
                 </Link>
+                <button
+                  onClick={() => handleDelete(inv._id)} className="btn btn-sm btn-danger ms-2">
+                  Smazat
+                </button>
               </td>
             </tr>
           ))}
