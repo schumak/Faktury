@@ -2,10 +2,11 @@
 from rest_framework import viewsets, status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
+from rest_framework.decorators import action
+
 
 from ..models import Invoice
 from ..serializers import InvoiceSerializer
-
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.filter(hidden=False)
@@ -55,26 +56,14 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
         return qs
 
-
-    # def update(self, request, *args, **kwargs):
-    #     instance = self.get_object()
-
-    #     serializer = self.get_serializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-
-    #     instance.hidden = True
-    #     instance.save(update_fields=["hidden"])
-
-    #     validated_data = serializer.validated_data
-    #     validated_data.pop("hidden", None)  # klient nesmí řídit hidden
-
-    #     new_instance = Invoice.objects.create(**validated_data, hidden=False)
-
-    #     output_serializer = self.get_serializer(new_instance)
-    #     return Response(output_serializer.data, status=status.HTTP_200_OK)
-
-    # def destroy(self, request, *args, **kwargs):
-    #     instance = self.get_object()
-    #     instance.hidden = True
-    #     instance.save(update_fields=["hidden"])
-    #     return Response(status=status.HTTP_204_NO_CONTENT)
+    @action(detail=True, methods=["post"])
+    def archive(self, request, pk=None):
+        """
+        Archivuje fakturu – nastaví archived = True.
+        Volá se jako POST /api/invoices/{id}/archive/
+        """
+        invoice = self.get_object()
+        invoice.archived = True
+        invoice.save()
+        serializer = self.get_serializer(invoice)
+        return Response(serializer.data, status=status.HTTP_200_OK)

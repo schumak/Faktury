@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Countries(models.TextChoices):
@@ -40,6 +41,30 @@ class Invoice(models.Model):
     hidden = models.BooleanField(default=False, db_index=True)
     archived = models.BooleanField(default=False)
 
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+
+        # jen při vytváření nové faktury (invoice_number prázdné)
+        if not self.invoice_number:
+            year = timezone.now().year
+            prefix = f"{year}"
+
+            # poslední faktura toho roku
+            last = Invoice.objects.filter(
+                invoice_number__startswith=prefix
+            ).order_by("-invoice_number").first()
+
+            if last:
+                # část za rokem převedeme na číslo a +1
+                last_num = int(last.invoice_number[len(prefix):])
+                new_num = last_num + 1
+            else:
+                new_num = 1
+
+            # výsledný tvar např. 2025000001
+            self.invoice_number = f"{prefix}{new_num:07d}"
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        
         return f"{self.invoice_number} - {self.seller.name} to {self.buyer.name}"

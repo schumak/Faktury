@@ -56,11 +56,13 @@ class InvoicePersonField(serializers.Field):
 class InvoiceSerializer(serializers.ModelSerializer):
     _id = serializers.IntegerField(source="id", read_only=True)
 
-    # mapování názvů z frontendu na názvy v modelu
-    invoiceNumber = serializers.CharField(source="invoice_number")
+    invoiceNumber = serializers.CharField(
+        source="invoice_number",
+        required=False,
+        allow_blank=True,
+    )
     dueDate = serializers.DateField(source="due_date")
 
-    # seller / buyer – nested objekt s {_id: X} na vstupu, plný objekt na výstupu
     seller = InvoicePersonField()
     buyer = InvoicePersonField()
 
@@ -76,6 +78,6 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "price",
             "vat",
             "note",
-            "archived", 
+            "archived",
             "_id",
         ]
