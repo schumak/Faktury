@@ -1,43 +1,38 @@
-/*  _____ _______         _                      _
- * |_   _|__   __|       | |                    | |
- *   | |    | |_ __   ___| |___      _____  _ __| | __  ___ ____
- *   | |    | | '_ \ / _ \ __\ \ /\ / / _ \| '__| |/ / / __|_  /
- *  _| |_   | | | | |  __/ |_ \ V  V / (_) | |  |   < | (__ / /
- * |_____|  |_|_| |_|\___|\__| \_/\_/ \___/|_|  |_|\_(_)___/___|
- *                                _
- *              ___ ___ ___ _____|_|_ _ _____
- *             | . |  _| -_|     | | | |     |  LICENCE
- *             |  _|_| |___|_|_|_|_|___|_|_|_|
- *             |_|
- *
- *   PROGRAMOVÁNÍ  <>  DESIGN  <>  PRÁCE/PODNIKÁNÍ  <>  HW A SW
- *
- * Tento zdrojový kód je součástí výukových seriálů na
- * IT sociální síti WWW.ITNETWORK.CZ
- *
- * Kód spadá pod licenci prémiového obsahu a vznikl díky podpoře
- * našich členů. Je určen pouze pro osobní užití a nesmí být šířen.
- * Více informací na http://www.itnetwork.cz/licence
- */
-
 
 const API_URL = "http://localhost:8000";
 
 const fetchData = (url, requestOptions) => {
-    const apiUrl = `${API_URL}${url}`;
+  const apiUrl = `${API_URL}${url}`;
 
-    return fetch(apiUrl, requestOptions)
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
-            }
+  return fetch(apiUrl, requestOptions)
+    .then(async (response) => {
+      let json = null;
+      try {
+        json = await response.json();   // pokus o parsování JSONu
+      } catch (e) {
+        // Tělo není JSON → nevadí
+      }
 
-            if (requestOptions.method !== 'DELETE')
-                return response.json();
-        })
-        .catch((error) => {
-            throw error;
-        });
+      if (!response.ok) {
+        // Vytvoříme chybu a přidáme data z backendu
+        const err = new Error(
+          json && typeof json === "object"
+            ? "VALIDATION_ERROR"
+            : `Network response was not ok: ${response.status} ${response.statusText}`
+        );
+        err.status = response.status;
+        err.data = json;     // <- TADY JSOU POLE A CHYBY OD BACKENDU (např. {product: ["This field is required"]})
+        throw err;
+      }
+
+      // DELETY nemají JSON tělo, takže ho nevracíme
+      if (requestOptions.method !== "DELETE") {
+        return json;
+      }
+    })
+    .catch((error) => {
+      throw error;
+    });
 };
 
 export const apiGet = (url, params) => {

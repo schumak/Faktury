@@ -1,288 +1,284 @@
-/*  _____ _______         _                      _
- * |_   _|__   __|       | |                    | |
- *   | |    | |_ __   ___| |___      _____  _ __| | __  ___ ____
- *   | |    | | '_ \ / _ \ __\ \ /\ / / _ \| '__| |/ / / __|_  /
- *  _| |_   | | | | |  __/ |_ \ V  V / (_) | |  |   < | (__ / /
- * |_____|  |_|_| |_|\___|\__| \_/\_/ \___/|_|  |_|\_(_)___/___|
- *                                _
- *              ___ ___ ___ _____|_|_ _ _____
- *             | . |  _| -_|     | | | |     |  LICENCE
- *             |  _|_| |___|_|_|_|_|___|_|_|_|
- *             |_|
- *
- *   PROGRAMOVÁNÍ  <>  DESIGN  <>  PRÁCE/PODNIKÁNÍ  <>  HW A SW
- *
- * Tento zdrojový kód je součástí výukových seriálů na
- * IT sociální síti WWW.ITNETWORK.CZ
- *
- * Kód spadá pod licenci prémiového obsahu a vznikl díky podpoře
- * našich členů. Je určen pouze pro osobní užití a nesmí být šířen.
- * Více informací na http://www.itnetwork.cz/licence
- */
-
-import React, {useEffect, useState} from "react";
-import {useNavigate, useParams, Link } from "react-router-dom";
-
-import {apiGet, apiPost, apiPut} from "../utils/api";
-
-import InputField from "../components/InputField";
-import InputCheck from "../components/InputCheck";
-import FlashMessage from "../components/FlashMessage";
-
-import Country from "./Country";
+// PersonForm.jsx
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { apiGet, apiPost, apiPut } from "../utils/api";
+import Country from "./Country"; // klidně může zůstat
 
 const PersonForm = () => {
-    const navigate = useNavigate();
-    const {id} = useParams();
-    const [person, setPerson] = useState({
-        name: "",
-        identificationNumber: "",
-        taxNumber: "",
-        accountNumber: "",
-        bankCode: "",
-        iban: "",
-        telephone: "",
-        mail: "",
-        street: "",
-        zip: "",
-        city: "",
-        country: Country.CZECHIA,
-        note: ""
-    });
-    const [sentState, setSent] = useState(false);
-    const [successState, setSuccess] = useState(false);
-    const [errorState, setError] = useState(null);
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        if (id) {
-            apiGet("/api/persons/" + id).then((data) => setPerson(data));
-        }
-    }, [id]);
+  const [person, setPerson] = useState({
+    name: "",
+    identificationNumber: "",
+    taxNumber: "",
+    accountNumber: "",
+    bankCode: "",
+    iban: "",
+    telephone: "",
+    mail: "",
+    street: "",
+    zip: "",
+    city: "",
+    country: "CZECHIA",
+    note: "",
+  });
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-        (id ? apiPut("/api/persons/" + id, person) : apiPost("/api/persons", person))
-            .then((data) => {
-                setSent(true);
-                setSuccess(true);
-                navigate("/persons");
-            })
-            .catch((error) => {
-                console.log(error.message);
-                setError(error.message);
-                setSent(true);
-                setSuccess(false);
-            });
-    };
+  // EDIT – načíst existující osobu
+  useEffect(() => {
+    if (!id) return;
 
-    const sent = sentState;
-    const success = successState;
+    setLoading(true);
+    setError(null);
 
-    return (
-        <div>
-            <h1>{id ? "Upravit" : "Vytvořit"} osobnost</h1>
-            <hr/>
-            {errorState ? (
-                <div className="alert alert-danger">{errorState}</div>
-            ) : null}
-            {sent && (
-                <FlashMessage
-                    theme={success ? "success" : ""}
-                    text={success ? "Uložení osobnosti proběhlo úspěšně." : ""}
-                />
-            )}
-            <form onSubmit={handleSubmit}>
-                <InputField
-                    required={true}
-                    type="text"
-                    name="personName"
-                    min="3"
-                    label="Jméno"
-                    prompt="Zadejte celé jméno"
-                    value={person.name}
-                    handleChange={(e) => {
-                        setPerson({...person, name: e.target.value});
-                    }}
-                />
+    apiGet(`/api/persons/${id}`)
+      .then((data) => {
+        setPerson(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Nepodařilo se načíst osobu.");
+        setLoading(false);
+      });
+  }, [id]);
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="identificationNumber"
-                    min="3"
-                    label="IČO"
-                    prompt="Zadejte IČO"
-                    value={person.identificationNumber}
-                    handleChange={(e) => {
-                        setPerson({...person, identificationNumber: e.target.value});
-                    }}
-                />
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setPerson((prev) => ({ ...prev, [name]: value }));
+  }
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="taxNumber"
-                    min="3"
-                    label="DIČ"
-                    prompt="Zadejte DIČ"
-                    value={person.taxNumber}
-                    handleChange={(e) => {
-                        setPerson({...person, taxNumber: e.target.value});
-                    }}
-                />
+  function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="accountNumber"
-                    min="3"
-                    label="Číslo bankovního účtu"
-                    prompt="Zadejte číslo bankovního účtu"
-                    value={person.accountNumber}
-                    handleChange={(e) => {
-                        setPerson({...person, accountNumber: e.target.value});
-                    }}
-                />
+    const payload = { ...person };
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="bankCode"
-                    min="3"
-                    label="Kód banky"
-                    prompt="Zadejte kód banky"
-                    value={person.bankCode}
-                    handleChange={(e) => {
-                        setPerson({...person, bankCode: e.target.value});
-                    }}
-                />
+    const request = id
+      ? apiPut(`/api/persons/${id}`, payload)   // update
+      : apiPost("/api/persons", payload);       // create
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="IBAN"
-                    min="3"
-                    label="IBAN"
-                    prompt="Zadejte IBAN"
-                    value={person.iban}
-                    handleChange={(e) => {
-                        setPerson({...person, iban: e.target.value});
-                    }}
-                />
+    request
+      .then(() => {
+        navigate("/persons");
+      })
+      .catch(() => {
+        setError("Nepodařilo se uložit osobu.");
+        setLoading(false);
+      });
+  }
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="telephone"
-                    min="3"
-                    label="Telefon"
-                    prompt="Zadejte Telefon"
-                    value={person.telephone}
-                    handleChange={(e) => {
-                        setPerson({...person, telephone: e.target.value});
-                    }}
-                />
+  // kliknutí mimo panel = Zrušit
+  function handleOverlayClick() {
+    navigate("/persons");
+  }
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="mail"
-                    min="3"
-                    label="Mail"
-                    prompt="Zadejte mail"
-                    value={person.mail}
-                    handleChange={(e) => {
-                        setPerson({...person, mail: e.target.value});
-                    }}
-                />
+  if (loading && !id) {
+    return <p>Načítám…</p>;
+  }
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="street"
-                    min="3"
-                    label="Ulice"
-                    prompt="Zadejte ulici"
-                    value={person.street}
-                    handleChange={(e) => {
-                        setPerson({...person, street: e.target.value});
-                    }}
-                />
+  return (
+    // překryv přes celou stránku
+    <div
+      className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+      style={{
+        background: "rgba(0,0,0,0.25)",
+        zIndex: 1050,
+      }}
+      onClick={handleOverlayClick}
+    >
+      {/* vlastní panel – kliknutí uvnitř nesmí zavřít */}
+      <div
+        className="card"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: "480px",            
+          maxHeight: "80vh",            
+          overflowY: "auto",             // skroluje se jen uvnitř
+          boxShadow: "0 14px 35px rgba(0,0,0,0.3)", 
+          borderRadius: "8px",
+        }}
+      >
+        <div className="card-body" style={{ padding: "16px 20px" }}>
+          <h1 className="h4 text-center mb-3">
+            {id ? "Upravit osobu" : "Nová osoba"}
+          </h1>
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="ZIP"
-                    min="3"
-                    label="PSČ"
-                    prompt="Zadejte PSČ"
-                    value={person.zip}
-                    handleChange={(e) => {
-                        setPerson({...person, zip: e.target.value});
-                    }}
-                />
+          {error && <div className="alert alert-danger">{error}</div>}
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="city"
-                    min="3"
-                    label="Město"
-                    prompt="Zadejte město"
-                    value={person.city}
-                    handleChange={(e) => {
-                        setPerson({...person, city: e.target.value});
-                    }}
-                />
+          <form onSubmit={handleSubmit}>
+            {/* Jméno */}
+            <div className="mb-2">
+              <label className="form-label small">Jméno</label>
+              <input
+                className="form-control form-control-sm"
+                name="name"
+                value={person.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-                <InputField
-                    required={true}
-                    type="text"
-                    name="note"
-                    label="Poznámka"
-                    value={person.note}
-                    handleChange={(e) => {
-                        setPerson({...person, note: e.target.value});
-                    }}
-                />
+            {/* IČO */}
+            <div className="mb-2">
+              <label className="form-label small">IČO</label>
+              <input
+                className="form-control form-control-sm"
+                name="identificationNumber"
+                value={person.identificationNumber || ""}
+                onChange={handleChange}
+              />
+            </div>
 
-                <h6>Země:</h6>
+            {/* DIČ */}
+            <div className="mb-2">
+              <label className="form-label small">DIČ</label>
+              <input
+                className="form-control form-control-sm"
+                name="taxNumber"
+                value={person.taxNumber || ""}
+                onChange={handleChange}
+              />
+            </div>
 
-                <InputCheck
-                    type="radio"
-                    name="country"
-                    label="Česká republika"
-                    value={Country.CZECHIA}
-                    handleChange={(e) => {
-                        setPerson({...person, country: e.target.value});
-                    }}
-                    checked={Country.CZECHIA === person.country}
-                />
+            {/* Bankovní účet */}
+            <div className="mb-2">
+              <label className="form-label small">Číslo účtu</label>
+              <input
+                className="form-control form-control-sm"
+                name="accountNumber"
+                value={person.accountNumber || ""}
+                onChange={handleChange}
+              />
+            </div>
 
-                <InputCheck
-                    type="radio"
-                    name="country"
-                    label="Slovensko"
-                    value={Country.SLOVAKIA}
-                    handleChange={(e) => {
-                        setPerson({...person, country: e.target.value});
-                    }}
-                    checked={Country.SLOVAKIA === person.country}
-                />
+            {/* Kód banky */}
+            <div className="mb-2">
+              <label className="form-label small">Kód banky</label>
+              <input
+                className="form-control form-control-sm"
+                name="bankCode"
+                value={person.bankCode || ""}
+                onChange={handleChange}
+              />
+            </div>
 
-                <button type="submit" className="btn btn-primary">
+            {/* IBAN */}
+            <div className="mb-2">
+              <label className="form-label small">IBAN</label>
+              <input
+                className="form-control form-control-sm"
+                name="iban"
+                value={person.iban || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Telefon */}
+            <div className="mb-2">
+              <label className="form-label small">Telefon</label>
+              <input
+                className="form-control form-control-sm"
+                name="telephone"
+                value={person.telephone || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* E-mail */}
+            <div className="mb-2">
+              <label className="form-label small">E-mail</label>
+              <input
+                type="email"
+                className="form-control form-control-sm"
+                name="mail"
+                value={person.mail || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Adresa – ulice */}
+            <div className="mb-2">
+              <label className="form-label small">Ulice</label>
+              <input
+                className="form-control form-control-sm"
+                name="street"
+                value={person.street || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Město */}
+            <div className="mb-2">
+              <label className="form-label small">Město</label>
+              <input
+                className="form-control form-control-sm"
+                name="city"
+                value={person.city || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* PSČ */}
+            <div className="mb-2">
+              <label className="form-label small">PSČ</label>
+              <input
+                className="form-control form-control-sm"
+                name="zip"
+                value={person.zip || ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Země */}
+            <div className="mb-2">
+              <label className="form-label small">Země</label>
+              <select
+                className="form-control form-control-sm"
+                name="country"
+                value={person.country || "CZECHIA"}
+                onChange={handleChange}
+              >
+                <option value="CZECHIA">Česká republika</option>
+                <option value="SLOVAKIA">Slovensko</option>
+              </select>
+            </div>
+
+            {/* Poznámka */}
+            <div className="mb-3">
+              <label className="form-label small">Poznámka</label>
+              <textarea
+                className="form-control form-control-sm"
+                name="note"
+                value={person.note || ""}
+                onChange={handleChange}
+                rows={2}
+              />
+            </div>
+
+            {/* Tlačítka */}
+            <div className="d-flex justify-content-center mt-2 mb-1">
+              <button type="submit" className="btn btn-primary btn-sm me-3">
                 Uložit
-                </button>
+              </button>
 
-                <Link to="/persons" className="btn btn-secondary ms-2">
-                Zpět na seznam
-                </Link>
-                
-                
-            </form>
+              <Link
+                to="/persons"
+                className="btn btn-secondary btn-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Zrušit
+              </Link>
+            </div>
+          </form>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default PersonForm;
