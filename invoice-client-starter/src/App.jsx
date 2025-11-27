@@ -17,6 +17,8 @@ import PersonForm from "./persons/PersonForm";
 import InvoiceIndex from "./invoices/InvoiceIndex";
 import InvoiceDetail from "./invoices/InvoiceDetail";
 import InvoiceForm from "./invoices/InvoiceForm";
+import PurchasesByIco from "./invoices/PurchasesByIco";
+
 
 export function App() {
   return (
@@ -36,6 +38,12 @@ export function App() {
                 Faktury
               </Link>
             </li>
+            <li className="nav-item">
+              <Link to={"/fact-search"} className="nav-link">
+                Vyhledávání faktur podle IČ
+              </Link>
+            </li>
+
           </ul>
         </nav>
 
@@ -57,6 +65,8 @@ export function App() {
             <Route path="create" element={<InvoiceForm />} />
             <Route path="edit/:id" element={<InvoiceForm />} />
           </Route>
+          {/* >>> VÝPIS PŘIJATÝCH FAKTUR PODLE IČ <<< */}
+            <Route path="/fact-search" element={<PurchasesByIco />} />
         </Routes>
       </div>
     </Router>

@@ -13,6 +13,7 @@ const PersonTable = ({ label, items, deletePerson }) => {
           <tr>
             <th>#</th>
             <th>Jméno</th>
+            <th>IČO</th>
             <th>Email</th>
             <th>Telefon</th>
             <th>Akce</th>
@@ -26,6 +27,9 @@ const PersonTable = ({ label, items, deletePerson }) => {
 
               {/* Jméno */}
               <td>{item.name}</td>
+
+              {/* IČO */}
+              <td>{item.identificationNumber}</td>
 
               {/* Email */}
               <td>{item.mail}</td>
