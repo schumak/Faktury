@@ -7,11 +7,11 @@ function PurchasesByIco() {
   const [mode, setMode] = useState("purchases"); // "purchases" nebo "sales"
 
   useEffect(() => {
-    // automatické načítání po dopsání IČ (8 číslic) nebo změně režimu
+    // automatické načítání po dopsání IČ (8 číslic)
     if (ico && ico.length === 8 && /^[0-9]+$/.test(ico)) {
       const timeout = setTimeout(() => {
         loadInvoices();
-      }, 500); // debounce 500 ms
+      }, 500); //
 
       return () => clearTimeout(timeout);
     } else {

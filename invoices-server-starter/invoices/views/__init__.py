@@ -1,0 +1,1 @@
+from .identification_views import PurchasesByIdentificationView

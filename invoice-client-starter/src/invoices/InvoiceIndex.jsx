@@ -1,19 +1,25 @@
 // InvoiceIndex.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { apiGet, apiDelete, apiPost  } from "../utils/api"; // stejný helper jako u osob
+import { apiGet, apiDelete, apiPost } from "../utils/api";
 
 const InvoiceIndex = () => {
   const [invoices, setInvoices] = useState([]);
-  const [allInvoices, setAllInvoices] = useState([]); // kompletní seznam z API
-  const [search, setSearch] = useState("");           // text ve vyhledávacím poli
+  const [allInvoices, setAllInvoices] = useState([]);
 
-  // načtení faktur
+  // stav – HORNÍ FILTR
+  const [sellerFilter, setSellerFilter] = useState("");     // Dodavatel
+  const [buyerFilter, setBuyerFilter] = useState("");       // Odběratel
+  const [priceFrom, setPriceFrom] = useState("");           // Cena od
+  const [priceTo, setPriceTo] = useState("");               // Cena do
+  const [descriptionFilter, setDescriptionFilter] = useState(""); // Popis
+  const [limitCount, setLimitCount] = useState("");         // Limit počtu faktur
+
+  // načtení faktur z API
   useEffect(() => {
     apiGet("/api/invoices")
       .then((data) => {
-        setInvoices(data);
-        setAllInvoices(data);
+        setAllInvoices(data || []);
       })
       .catch((err) => {
         console.error("Chyba při načtení faktur:", err);
@@ -21,44 +27,89 @@ const InvoiceIndex = () => {
       });
   }, []);
 
-  // live filtrování při psaní – stejný princip jako u osob
+  // unikátní dodavatelé a odběratelé pro selecty
+  const sellerOptions = useMemo(() => {
+    const names = new Set();
+    allInvoices.forEach((inv) => {
+      if (inv.seller?.name) names.add(inv.seller.name);
+    });
+    return Array.from(names);
+  }, [allInvoices]);
+
+  const buyerOptions = useMemo(() => {
+    const names = new Set();
+    allInvoices.forEach((inv) => {
+      if (inv.buyer?.name) names.add(inv.buyer.name);
+    });
+    return Array.from(names);
+  }, [allInvoices]);
+
+  // Hlavní filtrování (horní formulář + rychlé vyhledávání)
   useEffect(() => {
-    const term = search.trim().toLowerCase();
+    let result = allInvoices.filter((inv) => {
+      // převody na bezpečné hodnoty
+      const sellerName = inv.seller?.name || "";
+      const buyerName = inv.buyer?.name || "";
+      const product = inv.product || "";
+      const note = inv.note || "";
+      const priceNum = Number(inv.price) || 0;
 
-    if (!term) {
-      setInvoices(allInvoices);
-      return;
-    }
+      // 1) Dodavatel
+      if (sellerFilter && sellerName !== sellerFilter) return false;
 
-    const filtered = allInvoices.filter((inv) => {
-      const fields = [
-        inv.invoiceNumber,   // číslo faktury
-        inv.product,         // produkt
-        inv.note,            // poznámka
-        inv.seller?.name,    // jméno dodavatele
-        inv.buyer?.name,     // jméno odběratele
-      ];
+      // 2) Odběratel
+      if (buyerFilter && buyerName !== buyerFilter) return false;
 
-      return fields.some((f) =>
-        (f || "").toString().toLowerCase().includes(term)
-      );
+      // 3) Cena od / do
+      if (priceFrom !== "" && priceNum < Number(priceFrom)) return false;
+      if (priceTo !== "" && priceNum > Number(priceTo)) return false;
+
+      // 4) Popis – beru produkt + poznámku
+      if (descriptionFilter.trim()) {
+        const descTerm = descriptionFilter.trim().toLowerCase();
+        const combined = `${product} ${note}`.toLowerCase();
+        if (!combined.includes(descTerm)) return false;
+      }
+
+      return true;
     });
 
-    setInvoices(filtered);
-  }, [search, allInvoices]);
+    // limit počtu faktur
+    if (limitCount) {
+      const limit = Number(limitCount);
+      if (!Number.isNaN(limit) && limit > 0) {
+        result = result.slice(0, limit);
+      }
+    }
 
-  const handleResetFilter = () => {
-    setSearch(""); // efekt výše sám vrátí původní seznam
+    setInvoices(result);
+  }, [
+    allInvoices,
+    sellerFilter,
+    buyerFilter,
+    priceFrom,
+    priceTo,
+    descriptionFilter,
+    limitCount,
+  ]);
+
+
+  const handleResetAllFilters = () => {
+    setSellerFilter("");
+    setBuyerFilter("");
+    setPriceFrom("");
+    setPriceTo("");
+    setDescriptionFilter("");
+    setLimitCount("");
   };
 
   // SMAZÁNÍ faktury
   const handleDelete = async (id) => {
-  if (!window.confirm("Opravdu chceš fakturu smazat?")) return;
+    if (!window.confirm("Opravdu chceš fakturu smazat?")) return;
 
     try {
-      await apiDelete(`/api/invoices/${id}`); // ← BEZ koncového /, stejně jako detail
+      await apiDelete(`/api/invoices/${id}`);
 
-      setInvoices((prev) => prev.filter((inv) => inv._id !== id));
       setAllInvoices((prev) => prev.filter((inv) => inv._id !== id));
     } catch (error) {
       console.error("Chyba při mazání faktury:", error);
@@ -67,13 +118,10 @@ const InvoiceIndex = () => {
   };
 
   const handleArchive = async (id) => {
-  if (!window.confirm("Archivovat fakturu?")) return;
-
+    if (!window.confirm("Archivovat fakturu?")) return;
 
     try {
-      await apiPost(`/api/invoices/${id}/archive/`, {}); // očekávám endpoint /archive/
-
-      setInvoices((prev) => prev.filter((inv) => inv._id !== id));
+      await apiPost(`/api/invoices/${id}/archive/`, {});
       setAllInvoices((prev) => prev.filter((inv) => inv._id !== id));
     } catch (error) {
       console.error("Chyba při archivaci faktury:", error);
@@ -85,27 +133,105 @@ const InvoiceIndex = () => {
     <div>
       <h1>Seznam faktur</h1>
 
+      {/* HORNÍ FILTRAČNÍ FORMULÁŘ */}
+      <form className="mb-3" onSubmit={(e) => e.preventDefault()}>
+        <div className="row mb-3">
+          <div className="col-md-6">
+            <label className="form-label">Dodavatel:</label>
+            <select
+              className="form-select"
+              value={sellerFilter}
+              onChange={(e) => setSellerFilter(e.target.value)}
+            >
+              <option value="">(nevybrán)</option>
+              {sellerOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label">Odběratel:</label>
+            <select
+              className="form-select"
+              value={buyerFilter}
+              onChange={(e) => setBuyerFilter(e.target.value)}
+            >
+              <option value="">(nevybrán)</option>
+              {buyerOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="row mb-3">
+          <div className="col-md-2">
+            <label className="form-label">Cena od:</label>
+            <input
+              type="number"
+              className="form-control"
+              placeholder="neuveden"
+              value={priceFrom}
+              onChange={(e) => setPriceFrom(e.target.value)}
+            />
+          </div>
+
+          <div className="col-md-2">
+            <label className="form-label">Cena do:</label>
+            <input
+              type="number"
+              className="form-control"
+              placeholder="neuveden"
+              value={priceTo}
+              onChange={(e) => setPriceTo(e.target.value)}
+            />
+          </div>
+
+          <div className="col-md-2">
+            <label className="form-label">Limit počtu faktur:</label>
+            <input
+              type="number"
+              className="form-control"
+              placeholder="neuveden"
+              value={limitCount}
+              onChange={(e) => setLimitCount(e.target.value)}
+            />
+          </div>          
+
+          <div className="col-md-4">
+            <label className="form-label">Popis:</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="neuveden"
+              value={descriptionFilter}
+              onChange={(e) => setDescriptionFilter(e.target.value)}
+            />
+          </div>
+
+
+          <div className="col-md-2 d-flex align-items-end">
+            <button
+              type="button"
+              className="btn btn-secondary w-100"
+              onClick={handleResetAllFilters}
+            >
+              Zrušit filtry
+            </button>
+          </div>
+        </div>
+
+      </form>
+
+
       <p className="mb-1 text-muted">Počet faktur: {invoices.length}</p>
 
-      <div className="d-flex align-items-center mb-3 mt-3">
-        <input
-          type="text"
-          className="form-control me-2"
-          placeholder="Vyhledat (číslo, produkt, klient)…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm py-1"
-          onClick={handleResetFilter}
-          style={{maxHeight: "50px", minWidth: "120px"}}
-        >
-          Zrušit filtr
-        </button>
-      </div>
-
+      {/* TABULKA FAKTUR */}
       <table className="table">
         <thead>
           <tr>

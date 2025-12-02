@@ -12,6 +12,7 @@ import {
 import PersonIndex from "./persons/PersonIndex";
 import PersonDetail from "./persons/PersonDetail";
 import PersonForm from "./persons/PersonForm";
+import InvoiceStatistics from "./invoices/InvoiceStatistics";
 
 // >>> NOVÉ IMPORTY PRO FAKTURY <<<
 import InvoiceIndex from "./invoices/InvoiceIndex";
@@ -43,6 +44,12 @@ export function App() {
                 Vyhledávání faktur podle IČ
               </Link>
             </li>
+            <li className="nav-item">
+              <Link to={"/invoices/statistics"} className="nav-link">
+                Statistiky
+              </Link>
+            </li>
+            
 
           </ul>
         </nav>
@@ -67,6 +74,8 @@ export function App() {
           </Route>
           {/* >>> VÝPIS PŘIJATÝCH FAKTUR PODLE IČ <<< */}
             <Route path="/fact-search" element={<PurchasesByIco />} />
+            <Route path="/invoices/statistics" element={<InvoiceStatistics />} />
+            
         </Routes>
       </div>
     </Router>

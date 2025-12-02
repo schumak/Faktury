@@ -3,6 +3,8 @@ from rest_framework import viewsets, status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.utils import timezone
+from django.db.models import Sum
 
 
 from ..models import Invoice
@@ -11,6 +13,34 @@ from ..serializers import InvoiceSerializer
 class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.filter(hidden=False)
     serializer_class = InvoiceSerializer
+
+    @action(detail=False, methods=["get"], url_path="statistics")
+    def statistics(self, request):
+        """
+        /api/invoices/statistics
+            Vrací:
+            - currentYearSum: součet cen za aktuální rok
+            - allTimeSum: součet cen za všechny roky
+            - invoicesCount: počet faktur v databázi
+            """
+        today = timezone.now().date()
+        current_year = today.year
+
+        qs = Invoice.objects.all()
+        all_time_sum = qs.aggregate(total=Sum("price"))["total"] or 0
+        current_year_sum = (
+            qs.filter(issued__year=current_year).aggregate(total=Sum("price"))["total"]
+            or 0
+        )
+        invoices_count = qs.count()
+
+        return Response(
+            {
+                "currentYearSum": current_year_sum,
+                "allTimeSum": all_time_sum,
+                "invoicesCount": invoices_count,
+            }
+        )
 
     def get_queryset(self):
         # základní queryset – jen nearchivované faktury, s nataženým seller/buyer

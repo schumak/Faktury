@@ -1,8 +1,13 @@
+# invoice_app/serializers.py
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from .models import Person, Invoice
 
 
+# ─────────────────────────────────────────────
+#  PERSON SERIALIZER
+# ─────────────────────────────────────────────
 class PersonSerializer(serializers.ModelSerializer):
     _id = serializers.IntegerField(source="id", read_only=True)
     identificationNumber = serializers.CharField(default=None)
@@ -27,17 +32,22 @@ class PersonSerializer(serializers.ModelSerializer):
         ]
 
 
+# ─────────────────────────────────────────────
+#  SPECIAL FIELD FOR INVOICE (Person as object)
+# ─────────────────────────────────────────────
 class InvoicePersonField(serializers.Field):
     """
     Vstup JSON:  {"_id": 1}
-    Uvnitř:      Person instance
+    Uvnitř:      Person instance (FK)
     Výstup JSON: celý objekt osoby přes PersonSerializer
     """
 
     def to_representation(self, value):
+        # PERSON → JSON pro výstup
         return PersonSerializer(value).data
 
     def to_internal_value(self, data):
+        # JSON → PERSON instance (rutiny pro POST/PUT)
         if not isinstance(data, dict) or "_id" not in data:
             raise ValidationError('Pole musí mít tvar: {"_id": <id osoby>}')
 
@@ -53,6 +63,10 @@ class InvoicePersonField(serializers.Field):
         except Person.DoesNotExist:
             raise ValidationError(f"Osoba s id={person_id} neexistuje.")
 
+
+# ─────────────────────────────────────────────
+#  INVOICE SERIALIZER – FULL DETAIL
+# ─────────────────────────────────────────────
 class InvoiceSerializer(serializers.ModelSerializer):
     _id = serializers.IntegerField(source="id", read_only=True)
 
@@ -79,5 +93,28 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "vat",
             "note",
             "archived",
+            "_id",
+        ]
+
+
+# ─────────────────────────────────────────────
+#  BONUS: FAST LISTING (BEZ VNOŘENÝCH OBJEKTŮ)
+# ─────────────────────────────────────────────
+class InvoiceListSerializer(serializers.ModelSerializer):
+    """
+    Rychlý serializer pro tabulkový / přehledový výpis.
+    Ideální pro /api/invoices or /sales/purchases tabulky.
+    """
+    sellerName = serializers.CharField(source="seller.name", read_only=True)
+    buyerName = serializers.CharField(source="buyer.name", read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = [
+            "invoiceNumber",
+            "sellerName",
+            "buyerName",
+            "issued",
+            "price",
             "_id",
         ]
