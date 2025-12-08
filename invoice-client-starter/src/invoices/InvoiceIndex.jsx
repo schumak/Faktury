@@ -1,4 +1,3 @@
-// InvoiceIndex.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { apiGet, apiDelete, apiPost } from "../utils/api";
@@ -7,27 +6,38 @@ const InvoiceIndex = () => {
   const [invoices, setInvoices] = useState([]);
   const [allInvoices, setAllInvoices] = useState([]);
 
-  // stav – HORNÍ FILTR
-  const [sellerFilter, setSellerFilter] = useState("");     // Dodavatel
-  const [buyerFilter, setBuyerFilter] = useState("");       // Odběratel
-  const [priceFrom, setPriceFrom] = useState("");           // Cena od
-  const [priceTo, setPriceTo] = useState("");               // Cena do
-  const [descriptionFilter, setDescriptionFilter] = useState(""); // Popis
-  const [limitCount, setLimitCount] = useState("");         // Limit počtu faktur
+  const [sellerFilter, setSellerFilter] = useState("");
+  const [buyerFilter, setBuyerFilter] = useState("");
+  const [priceFrom, setPriceFrom] = useState("");
+  const [priceTo, setPriceTo] = useState("");
+  const [descriptionFilter, setDescriptionFilter] = useState("");
+  const [limitCount, setLimitCount] = useState("");
 
-  // načtení faktur z API
+  const formatPrice = (value) => {
+    if (!value) return "-";
+    return Number(value).toLocaleString("cs-CZ") + " Kč";
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("cs-CZ");
+  };
+
+  const daysUntil = (date) => {
+    const now = new Date();
+    const due = new Date(date);
+    return Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+  };
+
   useEffect(() => {
     apiGet("/api/invoices")
-      .then((data) => {
-        setAllInvoices(data || []);
-      })
+      .then((data) => setAllInvoices(data || []))
       .catch((err) => {
         console.error("Chyba při načtení faktur:", err);
         alert("Nepodařilo se načíst faktury.");
       });
   }, []);
 
-  // unikátní dodavatelé a odběratelé pro selecty
   const sellerOptions = useMemo(() => {
     const names = new Set();
     allInvoices.forEach((inv) => {
@@ -44,27 +54,20 @@ const InvoiceIndex = () => {
     return Array.from(names);
   }, [allInvoices]);
 
-  // Hlavní filtrování (horní formulář + rychlé vyhledávání)
   useEffect(() => {
     let result = allInvoices.filter((inv) => {
-      // převody na bezpečné hodnoty
       const sellerName = inv.seller?.name || "";
       const buyerName = inv.buyer?.name || "";
       const product = inv.product || "";
       const note = inv.note || "";
       const priceNum = Number(inv.price) || 0;
 
-      // 1) Dodavatel
       if (sellerFilter && sellerName !== sellerFilter) return false;
-
-      // 2) Odběratel
       if (buyerFilter && buyerName !== buyerFilter) return false;
 
-      // 3) Cena od / do
       if (priceFrom !== "" && priceNum < Number(priceFrom)) return false;
       if (priceTo !== "" && priceNum > Number(priceTo)) return false;
 
-      // 4) Popis – beru produkt + poznámku
       if (descriptionFilter.trim()) {
         const descTerm = descriptionFilter.trim().toLowerCase();
         const combined = `${product} ${note}`.toLowerCase();
@@ -74,7 +77,6 @@ const InvoiceIndex = () => {
       return true;
     });
 
-    // limit počtu faktur
     if (limitCount) {
       const limit = Number(limitCount);
       if (!Number.isNaN(limit) && limit > 0) {
@@ -93,7 +95,6 @@ const InvoiceIndex = () => {
     limitCount,
   ]);
 
-
   const handleResetAllFilters = () => {
     setSellerFilter("");
     setBuyerFilter("");
@@ -103,13 +104,11 @@ const InvoiceIndex = () => {
     setLimitCount("");
   };
 
-  // SMAZÁNÍ faktury
   const handleDelete = async (id) => {
     if (!window.confirm("Opravdu chceš fakturu smazat?")) return;
 
     try {
       await apiDelete(`/api/invoices/${id}`);
-
       setAllInvoices((prev) => prev.filter((inv) => inv._id !== id));
     } catch (error) {
       console.error("Chyba při mazání faktury:", error);
@@ -131,9 +130,15 @@ const InvoiceIndex = () => {
 
   return (
     <div>
-      <h1>Seznam faktur</h1>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h1 className="m-0">Seznam faktur</h1>
+        <Link to="/invoices/create" className="btn btn-success">
+          <i className="fa fa-plus me-1"></i>
+          Nová faktura
+        </Link>
+      </div>
 
-      {/* HORNÍ FILTRAČNÍ FORMULÁŘ */}
+      {/* FILTR */}
       <form className="mb-3" onSubmit={(e) => e.preventDefault()}>
         <div className="row mb-3">
           <div className="col-md-6">
@@ -201,7 +206,7 @@ const InvoiceIndex = () => {
               value={limitCount}
               onChange={(e) => setLimitCount(e.target.value)}
             />
-          </div>          
+          </div>
 
           <div className="col-md-4">
             <label className="form-label">Popis:</label>
@@ -214,7 +219,6 @@ const InvoiceIndex = () => {
             />
           </div>
 
-
           <div className="col-md-2 d-flex align-items-end">
             <button
               type="button"
@@ -225,13 +229,13 @@ const InvoiceIndex = () => {
             </button>
           </div>
         </div>
-
       </form>
 
+      <p className="mb-1 text-muted">
+        Počet faktur: {invoices.length}
+      </p>
 
-      <p className="mb-1 text-muted">Počet faktur: {invoices.length}</p>
-
-      {/* TABULKA FAKTUR */}
+      {/* TABULKA */}
       <table className="table">
         <thead>
           <tr>
@@ -243,9 +247,10 @@ const InvoiceIndex = () => {
             <th>Vystaveno</th>
             <th>Splatnost</th>
             <th>Cena</th>
-            <th>Akce</th>
+            <th className="text-end">Akce</th>
           </tr>
         </thead>
+
         <tbody>
           {invoices.map((inv, index) => (
             <tr key={inv._id}>
@@ -254,48 +259,49 @@ const InvoiceIndex = () => {
               <td>{inv.seller?.name || "-"}</td>
               <td>{inv.buyer?.name || "-"}</td>
               <td>{inv.product}</td>
-              <td>{inv.issued}</td>
-              <td>{inv.dueDate}</td>
-              <td>{inv.price}</td>
-              <td>
+              <td>{formatDate(inv.issued)}</td>
+              <td>{formatDate(inv.dueDate)}</td>
+              <td>{formatPrice(inv.price)}</td>
+
+              <td className="text-end">
                 <Link
                   to={`/invoices/show/${inv._id}`}
-                  className="btn btn-info btn-sm me-2"
+                  className="btn btn-outline-primary btn-sm me-1"
+                  title="Zobrazit"
                 >
-                  Zobrazit
+                  <i className="fa fa-eye"></i>
                 </Link>
 
                 <Link
                   to={`/invoices/edit/${inv._id}`}
-                  className="btn btn-secondary btn-sm me-2"
+                  className="btn btn-outline-secondary btn-sm me-1"
+                  title="Upravit"
                 >
-                  Upravit
+                  <i className="fa fa-edit"></i>
                 </Link>
 
                 <button
                   type="button"
-                  className="btn btn-warning btn-sm me-2"
+                  className="btn btn-outline-warning btn-sm me-1"
                   onClick={() => handleArchive(inv._id)}
+                  title="Archivovat"
                 >
-                  Archivovat
+                  <i className="fa fa-archive"></i>
                 </button>
 
                 <button
                   type="button"
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-outline-danger btn-sm"
                   onClick={() => handleDelete(inv._id)}
+                  title="Odstranit"
                 >
-                  Odstranit
+                  <i className="fa fa-trash"></i>
                 </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-      <Link to="/invoices/create" className="btn btn-success mt-3">
-        Nová faktura
-      </Link>
     </div>
   );
 };

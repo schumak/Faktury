@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 const PersonTable = ({ label, items, deletePerson }) => {
   return (
     <div>
-      <p>
+
+      <p className="mb-1 text-muted">
         {label} {items.length}
       </p>
 
@@ -16,49 +17,43 @@ const PersonTable = ({ label, items, deletePerson }) => {
             <th>IČO</th>
             <th>Email</th>
             <th>Telefon</th>
-            <th>Akce</th>
+            <th className="text-end">Akce</th>
           </tr>
         </thead>
+
         <tbody>
           {items.map((item, index) => (
             <tr key={item._id}>
-              {/* Pořadové číslo */}
               <td>{index + 1}</td>
-
-              {/* Jméno */}
               <td>{item.name}</td>
-
-              {/* IČO */}
               <td>{item.identificationNumber}</td>
-
-              {/* Email */}
               <td>{item.mail}</td>
-
-              {/* Telefon */}
               <td>{item.telephone}</td>
 
-              {/* Akce */}
-              <td>
+              <td className="text-end">
                 <Link
                   to={`/persons/show/${item._id}`}
-                  className="btn btn-info btn-sm me-2"
+                  className="btn btn-outline-primary btn-sm me-1"
+                  title="Zobrazit"
                 >
-                  Zobrazit
+                  <i className="fa fa-eye"></i>
                 </Link>
 
                 <Link
                   to={`/persons/edit/${item._id}`}
-                  className="btn btn-secondary btn-sm me-2"
+                  className="btn btn-outline-secondary btn-sm me-1"
+                  title="Upravit"
                 >
-                  Upravit
+                  <i className="fa fa-edit"></i>
                 </Link>
 
                 <button
                   type="button"
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-outline-danger btn-sm"
                   onClick={() => deletePerson(item._id)}
+                  title="Odstranit"
                 >
-                  Odstranit
+                  <i className="fa fa-trash"></i>
                 </button>
               </td>
             </tr>
@@ -66,9 +61,6 @@ const PersonTable = ({ label, items, deletePerson }) => {
         </tbody>
       </table>
 
-      <Link to="/persons/create" className="btn btn-success mt-3">
-        Nová osoba
-      </Link>
     </div>
   );
 };

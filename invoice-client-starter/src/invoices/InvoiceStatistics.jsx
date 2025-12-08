@@ -50,6 +50,15 @@ function PersonStatistics() {
     setSortDesc(!sortDesc);
   }
 
+    // řazení podle jména
+  function sortByName() {
+    const sorted = [...stats].sort((a, b) =>
+      sortDesc ? b.personName.localeCompare(a.personName) : a.personName.localeCompare(b.personName)
+    );
+    setStats(sorted);
+    setSortDesc(!sortDesc);
+  }
+
   return (
     <div className="mt-4">
       <div className="card shadow-sm">
@@ -96,9 +105,11 @@ function PersonStatistics() {
                 <thead className="table-light">
                   <tr>
                     <th>ID osoby</th>
-                    <th>Název / jméno</th>
+                    <th onClick={sortByName} style={{ cursor: "pointer" }}>
+                      Název / jméno {sortDesc ? "▼" : "▲"}
+                    </th>
                     <th onClick={sortByRevenue} style={{ cursor: "pointer" }}>
-                      Revenue (Kč) {sortDesc ? "▼" : "▲"}
+                      Obrat (Kč) {sortDesc ? "▼" : "▲"}
                     </th>
                     <th>Podíl na obratu</th>
                   </tr>

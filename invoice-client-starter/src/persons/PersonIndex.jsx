@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import { apiDelete, apiGet } from "../utils/api";
+import { Link } from "react-router-dom";
 
 import PersonTable from "./PersonTable";
 
@@ -16,7 +17,8 @@ const PersonIndex = () => {
       console.log(error.message);
       alert(error.message);
     }
-    // smažeme z aktuálního seznamu i z původního
+
+    // smažeme z aktuálního i původního seznamu
     setPersons((prev) => prev.filter((item) => item._id !== id));
     setAllPersons((prev) => prev.filter((item) => item._id !== id));
   };
@@ -39,9 +41,7 @@ const PersonIndex = () => {
     }
 
     const filtered = allPersons.filter((p) => {
-      const fields = [
-        p.name,
-      ];
+      const fields = [p.name];
       return fields.some((f) =>
         (f || "").toString().toLowerCase().includes(term)
       );
@@ -51,12 +51,19 @@ const PersonIndex = () => {
   }, [search, allPersons]);
 
   const handleResetFilter = () => {
-    setSearch(""); // efekt nad search/allPersons sám vrátí původní seznam
+    setSearch("");
   };
 
   return (
     <div>
-      <h1>Seznam osob</h1>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h1 className="m-0">Seznam osob</h1>
+
+        <Link to="/persons/create" className="btn btn-success">
+          <i className="fa fa-plus me-1"></i>
+          Nová osoba
+        </Link>
+      </div>
 
       {/* Vyhledávání */}
       <div className="d-flex align-items-center mb-3 mt-3">
@@ -72,8 +79,7 @@ const PersonIndex = () => {
           type="button"
           className="btn btn-secondary btn-sm"
           onClick={handleResetFilter}
-          style={{maxHeight: "50px", minWidth: "120px"}}
-
+          style={{ maxHeight: "50px", minWidth: "120px" }}
         >
           Zrušit filtr
         </button>
